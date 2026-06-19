@@ -8,13 +8,19 @@
 
 const DIRECT_URL = 'https://agentrouter.org/v1';
 
+// Auto-detect if running on Vercel (has /api/proxy available)
+const isVercel = window.location.hostname.includes('vercel.app') || 
+                 window.location.hostname.includes('.vercel.') ||
+                 window.location.hostname !== 'ramax100.github.io';
+const DEFAULT_PROXY = isVercel ? '/api/proxy' : '';
+
 // State
 let apiKey = '';
 let selectedModel = '';
 let messages = [];
 let isGenerating = false;
 let abortController = null;
-let proxyUrl = '';
+let proxyUrl = DEFAULT_PROXY;
 let useProxy = true;
 
 // Elements
@@ -91,6 +97,10 @@ function loadSavedSettings() {
         if (saved.proxyUrl) {
             proxyUrl = saved.proxyUrl;
             proxyUrlInput.value = saved.proxyUrl;
+        } else {
+            // Use default proxy for Vercel
+            proxyUrl = DEFAULT_PROXY;
+            proxyUrlInput.value = DEFAULT_PROXY;
         }
         if (saved.useProxy !== undefined) {
             useProxy = saved.useProxy;
@@ -136,7 +146,7 @@ async function connect() {
     }
 
     if (useProxy && !proxyUrl) {
-        setStatus('Masukkan Proxy URL. Lihat panduan di bawah untuk membuat proxy gratis.', 'error');
+        setStatus('Masukkan Proxy URL. Jika deploy di Vercel, gunakan /api/proxy', 'error');
         proxyUrlInput.focus();
         return;
     }
