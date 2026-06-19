@@ -1,9 +1,12 @@
 /**
- * AgentRouter Chat - Simple Classic Chat
+ * RichAi - AgentRouter Chat
  * Base URL: https://agentrouter.org/v1
+ * 
+ * Menggunakan Cloudflare Worker sebagai proxy untuk bypass
+ * browser restriction dari AgentRouter.
  */
 
-const BASE_URL = 'https://agentrouter.org/v1';
+const DIRECT_URL = 'https://agentrouter.org/v1';
 
 // State
 let apiKey = '';
@@ -11,24 +14,26 @@ let selectedModel = '';
 let messages = [];
 let isGenerating = false;
 let abortController = null;
+let proxyUrl = '';
+let useProxy = true;
 
 // Elements
 const apiKeyInput = document.getElementById('apiKey');
 const connectBtn = document.getElementById('connectBtn');
 const connectionStatus = document.getElementById('connectionStatus');
-const connectionPanel = document.getElementById('connectionPanel');
 const agentPanel = document.getElementById('agentPanel');
 const agentSelect = document.getElementById('agentSelect');
 const disconnectBtn = document.getElementById('disconnectBtn');
 const chatArea = document.getElementById('chatArea');
 const messagesEl = document.getElementById('messages');
-const emptyState = document.getElementById('emptyState');
 const chatInput = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
+const proxyToggle = document.getElementById('proxyToggle');
+const proxyUrlInput = document.getElementById('proxyUrl');
 
 // Init
 document.addEventListener('DOMContentLoaded', () => {
-    loadSavedKey();
+    loadSavedSettings();
     initListeners();
 });
 
@@ -66,18 +71,59 @@ function initListeners() {
             chatInput.placeholder = 'Pilih agent terlebih dahulu...';
         }
     });
+
+    proxyToggle.addEventListener('change', () => {
+        useProxy = proxyToggle.checked;
+        proxyUrlInput.disabled = !useProxy;
+        saveSettings();
+    });
+
+    proxyUrlInput.addEventListener('change', () => {
+        proxyUrl = proxyUrlInput.value.trim();
+        saveSettings();
+    });
 }
 
-function loadSavedKey() {
-    const saved = localStorage.getItem('agentrouter_apikey');
-    if (saved) {
-        apiKeyInput.value = saved;
-    }
+function loadSavedSettings() {
+    try {
+        const saved = JSON.parse(localStorage.getItem('richai_settings') || '{}');
+        if (saved.apiKey) apiKeyInput.value = saved.apiKey;
+        if (saved.proxyUrl) {
+            proxyUrl = saved.proxyUrl;
+            proxyUrlInput.value = saved.proxyUrl;
+        }
+        if (saved.useProxy !== undefined) {
+            useProxy = saved.useProxy;
+            proxyToggle.checked = useProxy;
+            proxyUrlInput.disabled = !useProxy;
+        }
+    } catch (e) {}
+}
+
+function saveSettings() {
+    localStorage.setItem('richai_settings', JSON.stringify({
+        apiKey: apiKeyInput.value.trim(),
+        proxyUrl: proxyUrlInput.value.trim(),
+        useProxy
+    }));
 }
 
 function setStatus(text, type) {
     connectionStatus.textContent = text;
     connectionStatus.className = 'connection-status ' + type;
+}
+
+/**
+ * Build the actual fetch URL.
+ * If proxy enabled: proxyUrl?endpoint=models
+ * If proxy disabled: direct to agentrouter.org/v1/models
+ */
+function buildUrl(endpoint) {
+    if (useProxy && proxyUrl) {
+        const separator = proxyUrl.includes('?') ? '&' : '?';
+        return `${proxyUrl}${separator}endpoint=${encodeURIComponent(endpoint)}`;
+    }
+    return `${DIRECT_URL}/${endpoint}`;
 }
 
 // Connect & Fetch Models
@@ -89,37 +135,50 @@ async function connect() {
         return;
     }
 
+    if (useProxy && !proxyUrl) {
+        setStatus('Masukkan Proxy URL. Lihat panduan di bawah untuk membuat proxy gratis.', 'error');
+        proxyUrlInput.focus();
+        return;
+    }
+
     connectBtn.disabled = true;
     setStatus('Menghubungkan...', 'loading');
 
     try {
-        // Fetch available models from the API
-        const response = await fetch(`${BASE_URL}/models`, {
+        const url = buildUrl('models');
+        const response = await fetch(url, {
             headers: {
-                'Authorization': `Bearer ${key}`
+                'Authorization': `Bearer ${key}`,
+                'Content-Type': 'application/json'
             }
         });
 
         if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.error?.message || `Gagal terhubung (HTTP ${response.status})`);
+            const errText = await response.text();
+            let errMsg;
+            try {
+                const errJson = JSON.parse(errText);
+                errMsg = errJson.error?.message || errText;
+            } catch {
+                errMsg = errText.substring(0, 200);
+            }
+            throw new Error(errMsg || `Gagal terhubung (HTTP ${response.status})`);
         }
 
         const data = await response.json();
         const models = data.data || data.models || data || [];
 
         if (!Array.isArray(models) || models.length === 0) {
-            throw new Error('Tidak ada model/agent yang tersedia untuk API key ini.');
+            throw new Error('Tidak ada model/agent yang tersedia.');
         }
 
-        // Save key
+        // Save
         apiKey = key;
-        localStorage.setItem('agentrouter_apikey', key);
+        saveSettings();
 
-        // Populate model selector
+        // Populate
         populateModels(models);
 
-        // Show UI
         setStatus(`Terhubung! ${models.length} model tersedia.`, 'success');
         agentPanel.classList.remove('hidden');
         chatArea.classList.remove('hidden');
@@ -134,36 +193,31 @@ async function connect() {
 function populateModels(models) {
     agentSelect.innerHTML = '<option value="">-- Pilih Model --</option>';
 
-    // Group models by owner/provider if possible
     const grouped = {};
-
     models.forEach(model => {
-        const id = model.id || model.name || model;
-        const name = model.name || model.id || model;
+        const id = model.id || model.name || String(model);
         const owned = model.owned_by || model.owner || 'other';
-
         if (!grouped[owned]) grouped[owned] = [];
-        grouped[owned].push({ id: typeof id === 'string' ? id : String(id), name: typeof name === 'string' ? name : String(name) });
+        grouped[owned].push(id);
     });
 
     const owners = Object.keys(grouped).sort();
 
     if (owners.length === 1 && owners[0] === 'other') {
-        // No grouping needed
-        grouped['other'].forEach(m => {
+        grouped['other'].forEach(id => {
             const opt = document.createElement('option');
-            opt.value = m.id;
-            opt.textContent = m.id;
+            opt.value = id;
+            opt.textContent = id;
             agentSelect.appendChild(opt);
         });
     } else {
         owners.forEach(owner => {
             const optgroup = document.createElement('optgroup');
             optgroup.label = capitalize(owner);
-            grouped[owner].forEach(m => {
+            grouped[owner].forEach(id => {
                 const opt = document.createElement('option');
-                opt.value = m.id;
-                opt.textContent = m.id;
+                opt.value = id;
+                opt.textContent = id;
                 optgroup.appendChild(opt);
             });
             agentSelect.appendChild(optgroup);
@@ -191,23 +245,20 @@ function disconnect() {
     setStatus('Terputus.', '');
 }
 
-// Chat Functions
+// Chat
 async function sendMessage() {
     const text = chatInput.value.trim();
     if (!text || isGenerating || !selectedModel) return;
 
-    // Hide empty state
     const empty = document.getElementById('emptyState');
     if (empty) empty.remove();
 
-    // Add user message
     messages.push({ role: 'user', content: text });
     appendBubble('user', text);
 
     chatInput.value = '';
     chatInput.style.height = 'auto';
 
-    // Generate
     await generate();
 }
 
@@ -216,7 +267,6 @@ async function generate() {
     sendBtn.disabled = true;
     chatInput.disabled = true;
 
-    // Add assistant placeholder
     const bubbleEl = appendBubble('assistant', '');
     const contentEl = bubbleEl.querySelector('.bubble');
     contentEl.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
@@ -224,13 +274,14 @@ async function generate() {
     abortController = new AbortController();
 
     try {
+        const url = buildUrl('chat/completions');
         const body = {
             model: selectedModel,
             messages: messages,
             stream: true
         };
 
-        const response = await fetch(`${BASE_URL}/chat/completions`, {
+        const response = await fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -241,8 +292,15 @@ async function generate() {
         });
 
         if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.error?.message || `Error ${response.status}`);
+            const errText = await response.text();
+            let errMsg;
+            try {
+                const errJson = JSON.parse(errText);
+                errMsg = errJson.error?.message || errText;
+            } catch {
+                errMsg = errText.substring(0, 200);
+            }
+            throw new Error(errMsg || `Error ${response.status}`);
         }
 
         // Stream reading
@@ -275,21 +333,14 @@ async function generate() {
                         contentEl.innerHTML = renderMarkdown(fullText);
                         scrollToBottom();
                     }
-                } catch (e) {
-                    // skip
-                }
+                } catch (e) {}
             }
-        }
-
-        // If no streaming worked, try non-stream
-        if (!fullText && response.headers.get('content-type')?.includes('application/json')) {
-            const json = await response.json();
-            fullText = json.choices?.[0]?.message?.content || '';
-            contentEl.innerHTML = renderMarkdown(fullText);
         }
 
         if (fullText) {
             messages.push({ role: 'assistant', content: fullText });
+        } else {
+            contentEl.innerHTML = '<p style="color:#999;"><em>Tidak ada respons.</em></p>';
         }
 
     } catch (error) {
@@ -297,7 +348,6 @@ async function generate() {
             contentEl.innerHTML += '<p><em>(Dihentikan)</em></p>';
         } else {
             contentEl.innerHTML = `<p style="color:#dc2626;">Error: ${escapeHtml(error.message)}</p>`;
-            // Remove user message on error
             messages.pop();
         }
     } finally {
@@ -312,14 +362,11 @@ async function generate() {
 function appendBubble(role, text) {
     const div = document.createElement('div');
     div.className = `message ${role}`;
-
     const senderLabel = role === 'user' ? 'Anda' : selectedModel || 'AI';
-
     div.innerHTML = `
         <div class="sender">${escapeHtml(senderLabel)}</div>
         <div class="bubble">${text ? renderMarkdown(text) : ''}</div>
     `;
-
     messagesEl.appendChild(div);
     scrollToBottom();
     return div;
@@ -331,41 +378,21 @@ function scrollToBottom() {
     });
 }
 
-// Simple Markdown Renderer
 function renderMarkdown(text) {
     let html = escapeHtml(text);
-
-    // Code blocks
-    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
-        return `<pre><code>${code.trim()}</code></pre>`;
-    });
-
-    // Inline code
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => `<pre><code>${code.trim()}</code></pre>`);
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-    // Bold
     html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-
-    // Italic
     html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-
-    // Headers
     html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
     html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
     html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
-
-    // Lists
     html = html.replace(/^[\-\*] (.+)$/gm, '<li>$1</li>');
     html = html.replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>');
-    // Clean nested ul
     html = html.replace(/<\/ul>\s*<ul>/g, '');
-
-    // Line breaks
     html = html.replace(/\n\n/g, '</p><p>');
     html = html.replace(/\n/g, '<br>');
-
     html = `<p>${html}</p>`;
-
     return html;
 }
 
