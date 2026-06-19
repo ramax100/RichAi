@@ -12,7 +12,6 @@ body {
     min-height: 100vh;
 }
 
-/* App Container */
 .app {
     max-width: 800px;
     margin: 0 auto;
@@ -69,7 +68,8 @@ body {
     color: #555;
 }
 
-.input-group input {
+.input-group input[type="text"],
+.input-group input[type="password"] {
     width: 100%;
     padding: 10px 14px;
     border: 1px solid #ddd;
@@ -97,6 +97,33 @@ body {
 
 .input-group small a:hover {
     text-decoration: underline;
+}
+
+/* Proxy Settings */
+.proxy-settings {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #eee;
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.83rem;
+    color: #666;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+.toggle-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #4f46e5;
+}
+
+.proxy-url-group {
+    margin-top: 8px;
 }
 
 .btn-connect {
@@ -127,17 +154,9 @@ body {
     min-height: 20px;
 }
 
-.connection-status.success {
-    color: #16a34a;
-}
-
-.connection-status.error {
-    color: #dc2626;
-}
-
-.connection-status.loading {
-    color: #d97706;
-}
+.connection-status.success { color: #16a34a; }
+.connection-status.error { color: #dc2626; }
+.connection-status.loading { color: #d97706; }
 
 /* Agent Panel */
 .agent-panel {
@@ -185,7 +204,6 @@ body {
     font-size: 0.8rem;
     cursor: pointer;
     white-space: nowrap;
-    transition: background 0.2s;
 }
 
 .btn-disconnect:hover {
@@ -219,7 +237,7 @@ body {
     font-size: 0.9rem;
 }
 
-/* Message Bubbles */
+/* Messages */
 .message {
     margin-bottom: 16px;
     display: flex;
@@ -299,23 +317,10 @@ body {
     padding: 0;
 }
 
-.message .bubble p {
-    margin-bottom: 8px;
-}
-
-.message .bubble p:last-child {
-    margin-bottom: 0;
-}
-
-.message .bubble ul,
-.message .bubble ol {
-    padding-left: 20px;
-    margin: 6px 0;
-}
-
-.message .bubble strong {
-    font-weight: 600;
-}
+.message .bubble p { margin-bottom: 8px; }
+.message .bubble p:last-child { margin-bottom: 0; }
+.message .bubble ul, .message .bubble ol { padding-left: 20px; margin: 6px 0; }
+.message .bubble strong { font-weight: 600; }
 
 /* Typing dots */
 .typing-dots {
@@ -359,7 +364,6 @@ body {
     resize: none;
     outline: none;
     max-height: 120px;
-    transition: border-color 0.2s;
 }
 
 .chat-input-area textarea:focus {
@@ -381,53 +385,20 @@ body {
     font-weight: 500;
     cursor: pointer;
     align-self: flex-end;
-    transition: background 0.2s;
 }
 
-.btn-send:hover {
-    background: #4338ca;
-}
+.btn-send:hover { background: #4338ca; }
+.btn-send:disabled { background: #a5b4fc; cursor: not-allowed; }
 
-.btn-send:disabled {
-    background: #a5b4fc;
-    cursor: not-allowed;
-}
+.hidden { display: none !important; }
 
-/* Utility */
-.hidden {
-    display: none !important;
-}
+.messages::-webkit-scrollbar { width: 5px; }
+.messages::-webkit-scrollbar-track { background: transparent; }
+.messages::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
 
-/* Scrollbar */
-.messages::-webkit-scrollbar {
-    width: 5px;
-}
-
-.messages::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.messages::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 3px;
-}
-
-/* Responsive */
 @media (max-width: 600px) {
-    .app {
-        padding: 12px;
-    }
-
-    .connection-form {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .agent-selector {
-        flex-wrap: wrap;
-    }
-
-    .message .bubble {
-        max-width: 95%;
-    }
+    .app { padding: 12px; }
+    .connection-form { flex-direction: column; align-items: stretch; }
+    .agent-selector { flex-wrap: wrap; }
+    .message .bubble { max-width: 95%; }
 }

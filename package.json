@@ -1,0 +1,10 @@
+{
+  "name": "richai-agentrouter-chat",
+  "version": "1.0.0",
+  "description": "AgentRouter Chat Web Application with server-side proxy",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  }
+}
