@@ -1,14 +1,10 @@
 /**
  * Vercel Serverless Function - Proxy to AgentRouter
- * 
- * Bypasses browser/client restrictions by:
- * 1. Making requests server-side (no CORS)
- * 2. Setting proper User-Agent (mimics CLI tool)
- * 3. Stripping browser-specific headers (Origin, Referer)
+ * Uses Node.js runtime (CommonJS export)
  */
 
-export default async function handler(req, res) {
-    // CORS headers for browser
+module.exports = async function handler(req, res) {
+    // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -29,13 +25,10 @@ export default async function handler(req, res) {
             'Accept': 'application/json',
         };
 
-        // Forward Authorization header
+        // Forward Authorization header only
         if (req.headers.authorization) {
             headers['Authorization'] = req.headers.authorization;
         }
-
-        // Do NOT forward Origin, Referer, or other browser headers
-        // This makes the request look like it's from a server/CLI
 
         const fetchOptions = {
             method: req.method,
@@ -48,7 +41,7 @@ export default async function handler(req, res) {
             fetchOptions.body = bodyStr;
         }
 
-        const isStream = req.body?.stream === true;
+        const isStream = req.body && req.body.stream === true;
 
         const response = await fetch(targetUrl, fetchOptions);
 
@@ -80,11 +73,11 @@ export default async function handler(req, res) {
             res.end();
         } else {
             const data = await response.text();
-            const contentType = response.headers.get('content-type') || 'application/json';
-            res.setHeader('Content-Type', contentType);
+            const ct = response.headers.get('content-type') || 'application/json';
+            res.setHeader('Content-Type', ct);
             res.status(response.status).send(data);
         }
     } catch (error) {
-        res.status(500).json({ error: { message: `Proxy error: ${error.message}` } });
+        res.status(500).json({ error: { message: 'Proxy error: ' + error.message } });
     }
-}
+};
