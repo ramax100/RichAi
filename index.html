@@ -29,12 +29,12 @@
             <div class="proxy-settings">
                 <label class="toggle-label">
                     <input type="checkbox" id="proxyToggle" checked>
-                    <span>Gunakan Proxy (diperlukan untuk request dari browser)</span>
+                    <span>Gunakan Proxy (wajib untuk akses dari browser)</span>
                 </label>
                 <div class="input-group proxy-url-group">
-                    <label for="proxyUrl">Proxy URL</label>
-                    <input type="text" id="proxyUrl" value="/api/proxy" placeholder="/api/proxy">
-                    <small>Default: /api/proxy (Vercel). Bisa diganti dengan Cloudflare Worker URL.</small>
+                    <label for="proxyUrl">Proxy Worker URL</label>
+                    <input type="text" id="proxyUrl" value="" placeholder="https://your-worker.workers.dev">
+                    <small>Buat proxy gratis di Cloudflare Workers. <a href="#panduan" onclick="document.getElementById('panduan').scrollIntoView()">Lihat panduan di bawah</a></small>
                 </div>
             </div>
 
@@ -48,7 +48,7 @@
                 <select id="agentSelect">
                     <option value="">-- Pilih Model --</option>
                 </select>
-                <button class="btn-disconnect" id="disconnectBtn" title="Putuskan koneksi">Disconnect</button>
+                <button class="btn-disconnect" id="disconnectBtn">Disconnect</button>
             </div>
         </div>
 
@@ -64,6 +64,59 @@
                 <textarea id="chatInput" placeholder="Ketik pesan..." rows="1" disabled></textarea>
                 <button class="btn-send" id="sendBtn" disabled>Kirim</button>
             </div>
+        </div>
+
+        <!-- Panduan Proxy -->
+        <div class="guide-panel" id="panduan">
+            <h3>Panduan Setup Proxy (Gratis, 2 Menit)</h3>
+            <p>AgentRouter memblokir request langsung dari browser. Anda perlu Cloudflare Worker sebagai proxy:</p>
+            <ol>
+                <li>Buka <a href="https://workers.cloudflare.com" target="_blank">workers.cloudflare.com</a> dan buat akun gratis</li>
+                <li>Klik <strong>"Create a Service"</strong> atau <strong>"Create Worker"</strong></li>
+                <li>Hapus semua kode default, lalu paste kode berikut:</li>
+            </ol>
+            <pre class="code-guide"><code>export default {
+  async fetch(request) {
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    };
+
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { status: 200, headers: corsHeaders });
+    }
+
+    const url = new URL(request.url);
+    const endpoint = url.searchParams.get('endpoint') || '';
+    const targetUrl = `https://agentrouter.org/v1/${endpoint}`;
+
+    const headers = { 'Content-Type': 'application/json' };
+    const auth = request.headers.get('Authorization');
+    if (auth) headers['Authorization'] = auth;
+
+    const fetchOptions = { method: request.method, headers };
+    if (request.method === 'POST') {
+      fetchOptions.body = await request.text();
+    }
+
+    const response = await fetch(targetUrl, fetchOptions);
+    const newHeaders = new Headers(response.headers);
+    Object.entries(corsHeaders).forEach(([k, v]) => newHeaders.set(k, v));
+
+    return new Response(response.body, {
+      status: response.status,
+      headers: newHeaders,
+    });
+  }
+};</code></pre>
+            <ol start="4">
+                <li>Klik <strong>"Save and Deploy"</strong></li>
+                <li>Copy URL worker Anda (contoh: <code>https://agentrouter-proxy.username.workers.dev</code>)</li>
+                <li>Paste URL tersebut di field <strong>"Proxy Worker URL"</strong> di atas</li>
+                <li>Klik <strong>"Koneksi"</strong> - selesai!</li>
+            </ol>
+            <p class="guide-note">Cloudflare Workers gratis untuk 100.000 request/hari. Lebih dari cukup untuk penggunaan pribadi.</p>
         </div>
     </div>
 

@@ -1,15 +1,12 @@
 /**
- * AgentRouter Chat - Simple Classic Chat
+ * RichAi - AgentRouter Chat
  * Base URL: https://agentrouter.org/v1
  * 
- * Uses server-side proxy to bypass browser CORS/client restrictions
- * Deploy on Vercel for the proxy to work, or use custom proxy URL.
+ * Menggunakan Cloudflare Worker sebagai proxy untuk bypass
+ * browser restriction dari AgentRouter.
  */
 
-// Detect environment: if on Vercel, use /api/proxy; otherwise direct
 const DIRECT_URL = 'https://agentrouter.org/v1';
-let useProxy = true; // default: use proxy to bypass browser restriction
-let PROXY_URL = '/api/proxy'; // Vercel serverless function
 
 // State
 let apiKey = '';
@@ -17,12 +14,13 @@ let selectedModel = '';
 let messages = [];
 let isGenerating = false;
 let abortController = null;
+let proxyUrl = '';
+let useProxy = true;
 
 // Elements
 const apiKeyInput = document.getElementById('apiKey');
 const connectBtn = document.getElementById('connectBtn');
 const connectionStatus = document.getElementById('connectionStatus');
-const connectionPanel = document.getElementById('connectionPanel');
 const agentPanel = document.getElementById('agentPanel');
 const agentSelect = document.getElementById('agentSelect');
 const disconnectBtn = document.getElementById('disconnectBtn');
@@ -74,47 +72,39 @@ function initListeners() {
         }
     });
 
-    if (proxyToggle) {
-        proxyToggle.addEventListener('change', () => {
-            useProxy = proxyToggle.checked;
-            if (proxyUrlInput) {
-                proxyUrlInput.disabled = !useProxy;
-            }
-            saveSettings();
-        });
-    }
+    proxyToggle.addEventListener('change', () => {
+        useProxy = proxyToggle.checked;
+        proxyUrlInput.disabled = !useProxy;
+        saveSettings();
+    });
 
-    if (proxyUrlInput) {
-        proxyUrlInput.addEventListener('change', () => {
-            PROXY_URL = proxyUrlInput.value.trim() || '/api/proxy';
-            saveSettings();
-        });
-    }
+    proxyUrlInput.addEventListener('change', () => {
+        proxyUrl = proxyUrlInput.value.trim();
+        saveSettings();
+    });
 }
 
 function loadSavedSettings() {
-    const saved = localStorage.getItem('agentrouter_settings');
-    if (saved) {
-        try {
-            const s = JSON.parse(saved);
-            if (s.apiKey) apiKeyInput.value = s.apiKey;
-            if (s.useProxy !== undefined) {
-                useProxy = s.useProxy;
-                if (proxyToggle) proxyToggle.checked = useProxy;
-            }
-            if (s.proxyUrl) {
-                PROXY_URL = s.proxyUrl;
-                if (proxyUrlInput) proxyUrlInput.value = s.proxyUrl;
-            }
-        } catch (e) {}
-    }
+    try {
+        const saved = JSON.parse(localStorage.getItem('richai_settings') || '{}');
+        if (saved.apiKey) apiKeyInput.value = saved.apiKey;
+        if (saved.proxyUrl) {
+            proxyUrl = saved.proxyUrl;
+            proxyUrlInput.value = saved.proxyUrl;
+        }
+        if (saved.useProxy !== undefined) {
+            useProxy = saved.useProxy;
+            proxyToggle.checked = useProxy;
+            proxyUrlInput.disabled = !useProxy;
+        }
+    } catch (e) {}
 }
 
 function saveSettings() {
-    localStorage.setItem('agentrouter_settings', JSON.stringify({
+    localStorage.setItem('richai_settings', JSON.stringify({
         apiKey: apiKeyInput.value.trim(),
-        useProxy,
-        proxyUrl: PROXY_URL
+        proxyUrl: proxyUrlInput.value.trim(),
+        useProxy
     }));
 }
 
@@ -123,10 +113,15 @@ function setStatus(text, type) {
     connectionStatus.className = 'connection-status ' + type;
 }
 
-// Build fetch URL
+/**
+ * Build the actual fetch URL.
+ * If proxy enabled: proxyUrl?endpoint=models
+ * If proxy disabled: direct to agentrouter.org/v1/models
+ */
 function buildUrl(endpoint) {
-    if (useProxy) {
-        return `${PROXY_URL}?endpoint=${encodeURIComponent(endpoint)}`;
+    if (useProxy && proxyUrl) {
+        const separator = proxyUrl.includes('?') ? '&' : '?';
+        return `${proxyUrl}${separator}endpoint=${encodeURIComponent(endpoint)}`;
     }
     return `${DIRECT_URL}/${endpoint}`;
 }
@@ -137,6 +132,12 @@ async function connect() {
     if (!key) {
         setStatus('Masukkan API Key terlebih dahulu.', 'error');
         apiKeyInput.focus();
+        return;
+    }
+
+    if (useProxy && !proxyUrl) {
+        setStatus('Masukkan Proxy URL. Lihat panduan di bawah untuk membuat proxy gratis.', 'error');
+        proxyUrlInput.focus();
         return;
     }
 
@@ -159,7 +160,7 @@ async function connect() {
                 const errJson = JSON.parse(errText);
                 errMsg = errJson.error?.message || errText;
             } catch {
-                errMsg = errText;
+                errMsg = errText.substring(0, 200);
             }
             throw new Error(errMsg || `Gagal terhubung (HTTP ${response.status})`);
         }
@@ -193,13 +194,11 @@ function populateModels(models) {
     agentSelect.innerHTML = '<option value="">-- Pilih Model --</option>';
 
     const grouped = {};
-
     models.forEach(model => {
-        const id = model.id || model.name || model;
+        const id = model.id || model.name || String(model);
         const owned = model.owned_by || model.owner || 'other';
-
         if (!grouped[owned]) grouped[owned] = [];
-        grouped[owned].push(typeof id === 'string' ? id : String(id));
+        grouped[owned].push(id);
     });
 
     const owners = Object.keys(grouped).sort();
@@ -299,7 +298,7 @@ async function generate() {
                 const errJson = JSON.parse(errText);
                 errMsg = errJson.error?.message || errText;
             } catch {
-                errMsg = errText;
+                errMsg = errText.substring(0, 200);
             }
             throw new Error(errMsg || `Error ${response.status}`);
         }
@@ -341,7 +340,7 @@ async function generate() {
         if (fullText) {
             messages.push({ role: 'assistant', content: fullText });
         } else {
-            contentEl.innerHTML = '<p style="color:#999;"><em>Tidak ada respons dari model.</em></p>';
+            contentEl.innerHTML = '<p style="color:#999;"><em>Tidak ada respons.</em></p>';
         }
 
     } catch (error) {
@@ -363,14 +362,11 @@ async function generate() {
 function appendBubble(role, text) {
     const div = document.createElement('div');
     div.className = `message ${role}`;
-
     const senderLabel = role === 'user' ? 'Anda' : selectedModel || 'AI';
-
     div.innerHTML = `
         <div class="sender">${escapeHtml(senderLabel)}</div>
         <div class="bubble">${text ? renderMarkdown(text) : ''}</div>
     `;
-
     messagesEl.appendChild(div);
     scrollToBottom();
     return div;
@@ -382,14 +378,9 @@ function scrollToBottom() {
     });
 }
 
-// Simple Markdown
 function renderMarkdown(text) {
     let html = escapeHtml(text);
-
-    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
-        return `<pre><code>${code.trim()}</code></pre>`;
-    });
-
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => `<pre><code>${code.trim()}</code></pre>`);
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
     html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
@@ -402,7 +393,6 @@ function renderMarkdown(text) {
     html = html.replace(/\n\n/g, '</p><p>');
     html = html.replace(/\n/g, '<br>');
     html = `<p>${html}</p>`;
-
     return html;
 }
 

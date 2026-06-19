@@ -1,4 +1,3 @@
-/* Reset */
 * {
     margin: 0;
     padding: 0;
@@ -18,10 +17,9 @@ body {
     padding: 20px;
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    min-height: 100vh;
 }
 
-/* Header */
 .header {
     text-align: center;
     padding: 16px 0;
@@ -29,19 +27,10 @@ body {
     margin-bottom: 20px;
 }
 
-.header h1 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #222;
-}
+.header h1 { font-size: 1.5rem; font-weight: 600; color: #222; }
+.header .subtitle { font-size: 0.85rem; color: #888; margin-top: 4px; }
 
-.header .subtitle {
-    font-size: 0.85rem;
-    color: #888;
-    margin-top: 4px;
-}
 
-/* Connection Panel */
 .connection-panel {
     background: #fff;
     border: 1px solid #e0e0e0;
@@ -56,10 +45,7 @@ body {
     align-items: flex-end;
 }
 
-.input-group {
-    flex: 1;
-}
-
+.input-group { flex: 1; }
 .input-group label {
     display: block;
     font-size: 0.85rem;
@@ -79,27 +65,12 @@ body {
     transition: border-color 0.2s;
 }
 
-.input-group input:focus {
-    border-color: #4f46e5;
-}
+.input-group input:focus { border-color: #4f46e5; }
+.input-group small { display: block; margin-top: 4px; font-size: 0.75rem; color: #999; }
+.input-group small a { color: #4f46e5; text-decoration: none; }
+.input-group small a:hover { text-decoration: underline; }
 
-.input-group small {
-    display: block;
-    margin-top: 4px;
-    font-size: 0.75rem;
-    color: #999;
-}
 
-.input-group small a {
-    color: #4f46e5;
-    text-decoration: none;
-}
-
-.input-group small a:hover {
-    text-decoration: underline;
-}
-
-/* Proxy Settings */
 .proxy-settings {
     margin-top: 14px;
     padding-top: 14px;
@@ -116,15 +87,8 @@ body {
     margin-bottom: 10px;
 }
 
-.toggle-label input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    accent-color: #4f46e5;
-}
-
-.proxy-url-group {
-    margin-top: 8px;
-}
+.toggle-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: #4f46e5; }
+.proxy-url-group { margin-top: 8px; }
 
 .btn-connect {
     padding: 10px 20px;
@@ -139,26 +103,15 @@ body {
     transition: background 0.2s;
 }
 
-.btn-connect:hover {
-    background: #4338ca;
-}
+.btn-connect:hover { background: #4338ca; }
+.btn-connect:disabled { background: #a5b4fc; cursor: not-allowed; }
 
-.btn-connect:disabled {
-    background: #a5b4fc;
-    cursor: not-allowed;
-}
-
-.connection-status {
-    margin-top: 10px;
-    font-size: 0.85rem;
-    min-height: 20px;
-}
-
+.connection-status { margin-top: 10px; font-size: 0.85rem; min-height: 20px; }
 .connection-status.success { color: #16a34a; }
 .connection-status.error { color: #dc2626; }
 .connection-status.loading { color: #d97706; }
 
-/* Agent Panel */
+
 .agent-panel {
     background: #fff;
     border: 1px solid #e0e0e0;
@@ -173,12 +126,7 @@ body {
     gap: 12px;
 }
 
-.agent-selector label {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: #555;
-    white-space: nowrap;
-}
+.agent-selector label { font-size: 0.85rem; font-weight: 500; color: #555; white-space: nowrap; }
 
 .agent-selector select {
     flex: 1;
@@ -191,9 +139,7 @@ body {
     cursor: pointer;
 }
 
-.agent-selector select:focus {
-    border-color: #4f46e5;
-}
+.agent-selector select:focus { border-color: #4f46e5; }
 
 .btn-disconnect {
     padding: 8px 14px;
@@ -206,11 +152,9 @@ body {
     white-space: nowrap;
 }
 
-.btn-disconnect:hover {
-    background: #fecaca;
-}
+.btn-disconnect:hover { background: #fecaca; }
 
-/* Chat Area */
+
 .chat-area {
     flex: 1;
     display: flex;
@@ -219,7 +163,7 @@ body {
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     overflow: hidden;
-    min-height: 0;
+    min-height: 300px;
 }
 
 .messages {
@@ -237,7 +181,6 @@ body {
     font-size: 0.9rem;
 }
 
-/* Messages */
 .message {
     margin-bottom: 16px;
     display: flex;
@@ -258,14 +201,9 @@ body {
     letter-spacing: 0.03em;
 }
 
-.message.user .sender {
-    color: #4f46e5;
-    text-align: right;
-}
+.message.user .sender { color: #4f46e5; text-align: right; }
+.message.assistant .sender { color: #059669; }
 
-.message.assistant .sender {
-    color: #059669;
-}
 
 .message .bubble {
     padding: 10px 14px;
@@ -311,18 +249,13 @@ body {
     font-family: 'Courier New', monospace;
 }
 
-.message .bubble pre code {
-    background: none;
-    color: inherit;
-    padding: 0;
-}
-
+.message .bubble pre code { background: none; color: inherit; padding: 0; }
 .message .bubble p { margin-bottom: 8px; }
 .message .bubble p:last-child { margin-bottom: 0; }
 .message .bubble ul, .message .bubble ol { padding-left: 20px; margin: 6px 0; }
 .message .bubble strong { font-weight: 600; }
 
-/* Typing dots */
+
 .typing-dots {
     display: inline-flex;
     gap: 4px;
@@ -345,7 +278,6 @@ body {
     30% { transform: translateY(-5px); }
 }
 
-/* Chat Input */
 .chat-input-area {
     display: flex;
     gap: 10px;
@@ -366,14 +298,8 @@ body {
     max-height: 120px;
 }
 
-.chat-input-area textarea:focus {
-    border-color: #4f46e5;
-}
-
-.chat-input-area textarea:disabled {
-    background: #f3f4f6;
-    cursor: not-allowed;
-}
+.chat-input-area textarea:focus { border-color: #4f46e5; }
+.chat-input-area textarea:disabled { background: #f3f4f6; cursor: not-allowed; }
 
 .btn-send {
     padding: 10px 20px;
@@ -391,6 +317,66 @@ body {
 .btn-send:disabled { background: #a5b4fc; cursor: not-allowed; }
 
 .hidden { display: none !important; }
+
+
+/* Guide Panel */
+.guide-panel {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 16px;
+    font-size: 0.85rem;
+    line-height: 1.7;
+}
+
+.guide-panel h3 {
+    font-size: 1rem;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.guide-panel ol {
+    padding-left: 20px;
+    margin: 10px 0;
+}
+
+.guide-panel ol li {
+    margin-bottom: 8px;
+}
+
+.guide-panel a {
+    color: #4f46e5;
+    text-decoration: none;
+}
+
+.guide-panel a:hover { text-decoration: underline; }
+
+.guide-panel .code-guide {
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 14px 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 12px 0;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    font-family: 'Courier New', monospace;
+}
+
+.guide-panel .code-guide code {
+    font-family: inherit;
+}
+
+.guide-note {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 6px;
+    color: #166534;
+    font-size: 0.8rem;
+}
 
 .messages::-webkit-scrollbar { width: 5px; }
 .messages::-webkit-scrollbar-track { background: transparent; }
