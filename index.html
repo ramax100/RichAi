@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentRouter Chat</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <h1>AgentRouter Chat</h1>
+            <p class="subtitle">AI Chat menggunakan AgentRouter API</p>
+        </header>
+
+        <!-- Connection Panel -->
+        <div class="connection-panel" id="connectionPanel">
+            <div class="connection-form">
+                <div class="input-group">
+                    <label for="apiKey">API Key</label>
+                    <input type="password" id="apiKey" placeholder="Masukkan API Key (sk-xxx)" autocomplete="off">
+                    <small>Dapatkan di <a href="https://agentrouter.org/console/token" target="_blank">agentrouter.org/console/token</a></small>
+                </div>
+                <button class="btn-connect" id="connectBtn">Koneksi</button>
+            </div>
+            <div class="connection-status" id="connectionStatus"></div>
+        </div>
+
+        <!-- Agent Selector (muncul setelah koneksi berhasil) -->
+        <div class="agent-panel hidden" id="agentPanel">
+            <div class="agent-selector">
+                <label for="agentSelect">Pilih Agent / Model:</label>
+                <select id="agentSelect">
+                    <option value="">-- Pilih Model --</option>
+                </select>
+                <button class="btn-disconnect" id="disconnectBtn" title="Putuskan koneksi">Disconnect</button>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-area hidden" id="chatArea">
+            <div class="messages" id="messages">
+                <div class="empty-state" id="emptyState">
+                    <p>Pilih agent dan mulai percakapan...</p>
+                </div>
+            </div>
+
+            <!-- Input Chat -->
+            <div class="chat-input-area">
+                <textarea id="chatInput" placeholder="Ketik pesan..." rows="1" disabled></textarea>
+                <button class="btn-send" id="sendBtn" disabled>Kirim</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
